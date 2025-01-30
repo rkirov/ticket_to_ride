@@ -345,20 +345,27 @@ for (let [k, v] of ticketsPerCity) {
 
 function djikstra(start: City, end: City): [City[], number] {
     let distances = new Map<City, number>();
+    let hops = new Map<City, number>();
     let previous = new Map<City, City | null>();
     let queue: City[] = [];
 
     for (let city of CITIES) {
         distances.set(city, Infinity);
+        hops.set(city, Infinity);
         previous.set(city, null);
         queue.push(city);
     }
 
     distances.set(start, 0);
+    hops.set(start, 0);
 
     while (queue.length > 0) {
-        let current = queue.reduce(
-            (min, city) => distances.get(city)! < distances.get(min)! ? city : min, queue[0]);
+        // Find city with minimum composite score (distance * 1000 + hops)
+        let current = queue.reduce((min, city) => {
+            let minScore = distances.get(min)! * 1000 + hops.get(min)!;
+            let cityScore = distances.get(city)! * 1000 + hops.get(city)!;
+            return cityScore < minScore ? city : min;
+        }, queue[0]);
         queue.splice(queue.indexOf(current), 1);
 
         for (let neighbor of neighbors.get(current)!) {
@@ -367,8 +374,13 @@ function djikstra(start: City, end: City): [City[], number] {
                 (r.to === current && r.from === neighbor)
             )?.distance;
             let alt = distances.get(current)! + d!;
-            if (alt < distances.get(neighbor)!) {
+            let newHops = hops.get(current)! + 1;
+            
+            // Update if distance is shorter OR if distance is equal but hops is fewer
+            if (alt < distances.get(neighbor)! || 
+                (alt === distances.get(neighbor)! && newHops < hops.get(neighbor)!)) {
                 distances.set(neighbor, alt);
+                hops.set(neighbor, newHops);
                 previous.set(neighbor, current);
             }
         }
