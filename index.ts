@@ -343,7 +343,24 @@ for (let [k, v] of ticketsPerCity) {
     console.log(`${k}: ${v.length}`);
 }
 
+// Cache for Dijkstra paths to avoid recalculating
+const pathCache = new Map<string, [City[], number]>();
+
 function djikstra(start: City, end: City): [City[], number] {
+    // Check if path is already cached
+    const cacheKey = `${start}-${end}`;
+    if (pathCache.has(cacheKey)) {
+        return pathCache.get(cacheKey)!;
+    }
+    
+    // Reverse direction check - path A→B is the same as B→A in reverse
+    const reverseCacheKey = `${end}-${start}`;
+    if (pathCache.has(reverseCacheKey)) {
+        const [reversePath, distance] = pathCache.get(reverseCacheKey)!;
+        const forwardPath = [...reversePath].reverse();
+        return [forwardPath, distance];
+    }
+
     let distances = new Map<City, number>();
     let hops = new Map<City, number>();
     let previous = new Map<City, City | null>();
@@ -393,7 +410,12 @@ function djikstra(start: City, end: City): [City[], number] {
         current = previous.get(current)!;
     }
 
-    return [path.reverse(), distances.get(end)!];
+    const result: [City[], number] = [path.reverse(), distances.get(end)!];
+    
+    // Cache the result for future use
+    pathCache.set(cacheKey, result);
+    
+    return result;
 }
 
 let ticketLengths = new Map<Ticket, [City[], number]>();
